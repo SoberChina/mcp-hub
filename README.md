@@ -1,54 +1,79 @@
 # MCP Hub 🦞
 
-> A curated collection of MCP (Model Context Protocol) servers and tools for AI-powered development.
+> A curated collection of MCP (Model Context Protocol) servers for AI-powered Java development.
 
 ## 🎯 What is MCP?
 
-The Model Context Protocol (MCP) is an open protocol that enables AI models to connect with external tools and data sources. This repository collects, develops, and documents MCP servers for developers.
+The Model Context Protocol (MCP) is an open protocol that enables AI models like Claude Code to connect with external tools. This repository focuses on **Java Spring Boot** MCP servers that supercharge your Java development workflow.
 
-## 📦 MCP Servers
+## 📦 Our MCP Server
 
-### Official Servers
+### Java Spring Boot MCP Server ✅ Production Ready
 
-| Server | Description | Language | Status |
-|--------|-------------|----------|--------|
-| [filesystem-mcp](https://github.com/SoberChina/mcp-hub/tree/main/servers/filesystem) | File system operations | TypeScript | ✅ Stable |
-| [database-mcp](https://github.com/SoberChina/mcp-hub/tree/main/servers/database) | Database connectivity | Java | 🔨 WIP |
-| [api-gateway-mcp](https://github.com/SoberChina/mcp-hub/tree/main/servers/api-gateway) | REST API scaffolding | Java | 🔨 WIP |
+**Turns Claude Code into a Java Spring Boot code generation machine.**
+
+| Tool | What it does |
+|------|-------------|
+| `spring_generate` | Generates Entity, Repository, Service, Controller, DTO, Config — real working Java code |
+| `java_compile` | Compiles Java source code |
+| `health_check` | Checks server health status |
 
 ## 🚀 Quick Start
 
+### 1. Build the JAR
+
 ```bash
-# Clone the repo
 git clone https://github.com/SoberChina/mcp-hub.git
-
-# Install dependencies
-npm install
-
-# Run a server
-cd servers/filesystem && npm start
+cd mcp-hub/servers/java-spring-mcp
+mvn clean package -DskipTests
 ```
 
-## 💡 Why MCP?
+### 2. Configure Claude Code
 
-- 🔌 **Pluggable** - Add new capabilities without changing your AI model
-- 🌐 **Standardized** - One protocol, infinite tools
-- 🤖 **AI-Native** - Built for the AI coding era
+Add this to your Claude Code settings (`~/.claude/settings.json`):
+
+```json
+{
+  "mcpServers": {
+    "java-spring-mcp": {
+      "command": "java",
+      "args": ["-jar", "/path/to/java-spring-mcp-1.0.0.jar"]
+    }
+  }
+}
+```
+
+### 3. Start coding
+
+In Claude Code, just say:
+
+> "Create a User entity with username, email, and password fields, then generate the full CRUD stack"
+
+The MCP server will generate all the Spring Boot code for you.
 
 ## 📚 Documentation
 
-- [MCP Protocol Spec](https://modelcontextprotocol.io)
-- [Getting Started Guide](./docs/getting-started.md)
-- [Java Integration Guide](./docs/java-integration.md)
+| Document | Description |
+|----------|-------------|
+| [Quick Start Guide](./docs/quick-start.md) | Fast-track setup in 5 minutes |
+| [Tools Reference](./docs/tools-reference.md) | All available tools and their parameters |
+| [Examples](./docs/examples.md) | Real-world usage examples |
+| [Contributing](../CONTRIBUTING.md) | How to add your own MCP server |
 
 ## 🤝 Contributing
 
-Contributions welcome! Read [CONTRIBUTING.md](./CONTRIBUTING.md) to learn how to add your MCP server.
+Contributions welcome! Read [CONTRIBUTING.md](../CONTRIBUTING.md) to learn how to add your MCP server.
 
 ## 📊 Stats
 
 ![Stars](https://img.shields.io/github/stars/SoberChina/mcp-hub?style=social)
 ![Forks](https://img.shields.io/github/forks/SoberChina/mcp-hub?style=social)
+
+## 🔗 Links
+
+- [MCP Protocol Spec](https://modelcontextprotocol.io)
+- [Claude Code](https://claude.ai/code)
+- [Spring Boot](https://spring.io/projects/spring-boot)
 
 ---
 

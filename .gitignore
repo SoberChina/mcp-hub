@@ -1,0 +1,26 @@
+# Maven
+target/
+!.mvn/wrapper/maven-wrapper.jar
+mvnw
+mvnw.cmd
+.mvn/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+*.swp
+
+# Build artifacts
+*.class
+*.jar
+*.war
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temp
+maven-tmp/
+temp-*.zip
+jdk*.zip

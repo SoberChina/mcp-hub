@@ -1,41 +1,22 @@
 # Filesystem MCP Server
 
-A TypeScript MCP server for file system operations.
+> ⚠️ **Coming Soon** — This server is under development.
 
-## Install
+## Status
 
-```bash
-cd servers/filesystem
-npm install
-```
+This is a placeholder for a Filesystem MCP server that will enable AI assistants to read, write, and manage local files through the MCP protocol.
 
-## Run
+## What it will do
 
-```bash
-npm start
-```
+- Read/write files
+- List directories
+- Create/move/delete files and folders
+- Search within files
 
-## Tools
+## When ready
 
-| Tool | Description |
-|------|-------------|
-| `read_file` | Read file contents |
-| `write_file` | Write content to file |
-| `list_directory` | List directory contents |
-| `create_directory` | Create a new directory |
-| `delete_file` | Delete a file |
+This server will be published at `servers/filesystem/`.
 
-## Claude Code Configuration
+---
 
-Add to your Claude Code config:
-
-```json
-{
-  "mcpServers": {
-    "filesystem": {
-      "command": "node",
-      "args": ["/path/to/servers/filesystem/dist/index.js"]
-    }
-  }
-}
-```
+For the working Java Spring Boot MCP Server, see [../java-spring-mcp](../java-spring-mcp).
