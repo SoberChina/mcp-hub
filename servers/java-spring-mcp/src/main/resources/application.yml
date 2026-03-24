@@ -1,0 +1,46 @@
+spring:
+  application:
+    name: java-spring-mcp
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+
+server:
+  port: ${APP_PORT:8080}
+  servlet:
+    context-path: /
+  compression:
+    enabled: true
+    mime-types: application/json,application/xml,text/html,text/xml,text/plain
+    min-response-size: 1024
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when_authorized
+  metrics:
+    export:
+      simple:
+        enabled: true
+
+mcp:
+  server:
+    name: java-spring-mcp
+    version: 1.0.0
+    description: Spring Boot MCP Server with tool generation capabilities
+
+logging:
+  level:
+    com.mcp: DEBUG
+    org.springframework: INFO
+    org.hibernate.SQL: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
