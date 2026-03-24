@@ -6,8 +6,6 @@ import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.validation.FieldError;
-import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
@@ -179,26 +177,18 @@ public class McpToolController {
 
                     import %s.entity.%s;
                     import org.springframework.data.jpa.repository.JpaRepository;
-                    import org.springframework.data.jpa.repository.Query;
-                    import org.springframework.data.repository.query.Param;
                     import org.springframework.stereotype.Repository;
 
-                    import java.util.List;
+                    import java.util.Optional;
 
                     @Repository
                     public interface %sRepository extends JpaRepository<%s, Long> {
 
-                        List<%s> findByNameContainingIgnoreCase(String name);
+                        Optional<%s> findByName(String name);
 
-                        @Query("SELECT e FROM %s e WHERE e.active = true ORDER BY e.createdAt DESC")
-                        List<%s> findAllActive();
-
-                        @Query("SELECT COUNT(e) FROM %s e")
-                        long countAll();
-
-                        boolean existsByNameIgnoreCase(@Param("name") String name);
+                        boolean existsByNameIgnoreCase(String name);
                     }
-                    """.formatted(pkg, pkg, name, name, name, name, name, name, name);
+                    """.formatted(pkg, pkg, name, name, name, name);
         }
 
         private String generateService(String pkg, String name) {
