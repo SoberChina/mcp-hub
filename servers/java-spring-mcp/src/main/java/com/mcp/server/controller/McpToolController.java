@@ -26,6 +26,7 @@ public class McpToolController {
         tools.put("java_compile", new JavaCompileTool());
         tools.put("spring_generate", new SpringGenerateTool());
         tools.put("health_check", new HealthCheckTool());
+        tools.put("code_review", new CodeReviewTool());
     }
 
     @PostMapping("/tools")
@@ -415,6 +416,209 @@ public class McpToolController {
             health.put("timestamp", Instant.now().toString());
             health.put("uptimeMs", Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory());
             return health;
+        }
+    }
+
+    static class CodeReviewTool implements ToolHandler {
+        @Override
+        public String getDescription() {
+            return "Review Java source code and provide improvement suggestions. Params: code (String) — the Java source code to review.";
+        }
+
+        @Override
+        public Object execute(Map<String, Object> params) {
+            String code = (String) params.get("code");
+            if (code == null || code.isBlank()) {
+                throw new IllegalArgumentException("Parameter 'code' is required");
+            }
+
+            String[] lines = code.split("\n");
+            List<Map<String, Object>> findings = new ArrayList<>();
+            int totalLines = lines.length;
+
+            for (int i = 0; i < lines.length; i++) {
+                String line = lines[i];
+                int lineNum = i + 1;
+                String trimmed = line.trim();
+
+                // Check: System.out.println / System.err.print
+                if (trimmed.contains("System.out.println") || trimmed.contains("System.err.print")) {
+                    findings.add(Map.of(
+                            "line", lineNum,
+                            "severity", "WARN",
+                            "category", "LOGGING",
+                            "message", "Avoid using System.out/System.err for logging. Use a logging framework (SLF4J with Logback/Log4j2) instead.",
+                            "code", trimmed
+                    ));
+                }
+
+                // Check: Empty catch block (handles both inline and standalone)
+                boolean hasEmptyCatch = trimmed.matches("catch\\s*\\([^)]+\\)\\s*\\{\\s*\\}")
+                        || trimmed.replaceAll("\\s+", " ").contains("catch (Exception e) { }")
+                        || trimmed.replaceAll("\\s+", " ").contains("catch(Exception e) { }")
+                        || trimmed.replaceAll("\\s+", " ").matches(".*catch\\s*\\([^)]+\\)\\s*\\{\\s*\\}.*");
+                if (hasEmptyCatch) {
+                    findings.add(Map.of(
+                            "line", lineNum,
+                            "severity", "ERROR",
+                            "category", "ERROR_HANDLING",
+                            "message", "Empty catch block silently swallows exceptions. At minimum log the exception or add a comment explaining the intentional ignore.",
+                            "code", trimmed
+                    ));
+                }
+
+                // Check: TODO / FIXME without description
+                if ((trimmed.startsWith("// TODO") || trimmed.startsWith("// FIXME") || trimmed.startsWith("//TODO") || trimmed.startsWith("//FIXME"))
+                        && trimmed.length() < 15) {
+                    findings.add(Map.of(
+                            "line", lineNum,
+                            "severity", "INFO",
+                            "category", "MAINTAINABILITY",
+                            "message", "TODO/FIXME comment lacks a description. Add a meaningful description to clarify what needs to be done.",
+                            "code", trimmed
+                    ));
+                }
+
+                // Check: Bare Thread.sleep without exception handling
+                if (trimmed.contains("Thread.sleep") && !trimmed.contains("try")) {
+                    findings.add(Map.of(
+                            "line", lineNum,
+                            "severity", "INFO",
+                            "category", "THREADING",
+                            "message", "Thread.sleep found outside a try block. Ensure this is intentional and consider handling InterruptedException.",
+                            "code", trimmed
+                    ));
+                }
+
+                // Check: new Date() / Calendar (legacy date API)
+                if (trimmed.contains("new Date()") || trimmed.contains("Calendar.getInstance")) {
+                    findings.add(Map.of(
+                            "line", lineNum,
+                            "severity", "INFO",
+                            "category", "MODERN_JAVA",
+                            "message", "Using legacy Date/Calendar API. Prefer java.time API (Instant, LocalDateTime, ZonedDateTime) for better readability and thread safety.",
+                            "code", trimmed
+                    ));
+                }
+
+                // Check: String comparison with == or !=
+                if (trimmed.matches(".*==.*||.*!=.*") && trimmed.contains("\"") && !trimmed.contains("Objects.equals") && !trimmed.contains(".equals")) {
+                    if (trimmed.matches(".*\\b\\w+\\b\\s*(==|!=)\\s*\\b\\w+\\b.*")) {
+                        // Simple heuristic: non-null String comparison with == or !=
+                    }
+                }
+                if (trimmed.matches(".*\\b\\w+\\b\\s*(==|!=)\\s*\\[\".*")) {
+                    findings.add(Map.of(
+                            "line", lineNum,
+                            "severity", "WARN",
+                            "category", "STRING_COMPARISON",
+                            "message", "Using == or != to compare strings. Always use .equals() (or Objects.equals for null-safe comparison).",
+                            "code", trimmed
+                    ));
+                }
+
+                // Check: public class without access modifier on method/field (already covered by default)
+                // Check: raw Collection/Map type without generics
+                if (trimmed.matches(".*\\b(HashMap|ArrayList|LinkedList|HashSet|TreeMap)\\s*<.*>.*") == false
+                        && (trimmed.contains("HashMap ") || trimmed.contains("ArrayList ") || trimmed.contains("LinkedList ") || trimmed.contains("HashSet ") || trimmed.contains("TreeMap "))) {
+                    if (!trimmed.contains("<") || !trimmed.contains(">")) {
+                        findings.add(Map.of(
+                                "line", lineNum,
+                                "severity", "WARN",
+                                "category", "GENERICS",
+                                "message", "Raw type usage (e.g., ArrayList instead of ArrayList<T>). Always specify type parameters for better type safety.",
+                                "code", trimmed
+                        ));
+                    }
+                }
+
+                // Check: TODO / FIXME anywhere in line
+                if ((trimmed.contains("// TODO") || trimmed.contains("// FIXME") || trimmed.contains("//TODO") || trimmed.contains("//FIXME"))
+                        && !trimmed.startsWith("//")) {
+                    // inline TODO - e.g. methodName = value; // TODO: something
+                    if (!findings.isEmpty() && findings.get(findings.size() - 1).get("line").equals(lineNum)
+                            && "MAINTAINABILITY".equals(findings.get(findings.size() - 1).get("category"))) {
+                        // already added
+                    } else {
+                        findings.add(Map.of(
+                                "line", lineNum,
+                                "severity", "INFO",
+                                "category", "MAINTAINABILITY",
+                                "message", "TODO/FIXME comment found inline. Ensure it is tracked in a project management system.",
+                                "code", trimmed
+                        ));
+                    }
+                }
+            }
+
+            // Overall summary
+            long errorCount = findings.stream().filter(f -> "ERROR".equals(f.get("severity"))).count();
+            long warnCount = findings.stream().filter(f -> "WARN".equals(f.get("severity"))).count();
+            long infoCount = findings.stream().filter(f -> "INFO".equals(f.get("severity"))).count();
+
+            StringBuilder report = new StringBuilder();
+            report.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
+            report.append("             JAVA CODE REVIEW REPORT            \n");
+            report.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n");
+            report.append(String.format("  Total lines reviewed : %d\n", totalLines));
+            report.append(String.format("  Issues found         : %d\n", findings.size()));
+            report.append(String.format("    🔴 Errors   : %d\n", errorCount));
+            report.append(String.format("    🟡 Warnings : %d\n", warnCount));
+            report.append(String.format("    🔵 Info     : %d\n", infoCount));
+            report.append("\n");
+
+            if (findings.isEmpty()) {
+                report.append("  ✅ No issues found. Code looks clean!\n");
+            } else {
+                report.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
+                report.append("  ISSUE DETAILS\n");
+                report.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n");
+
+                for (Map<String, Object> finding : findings) {
+                    String severity = (String) finding.get("severity");
+                    String icon = "ERROR".equals(severity) ? "🔴" : "WARN".equals(severity) ? "🟡" : "🔵";
+                    String category = (String) finding.get("category");
+                    int line = (Integer) finding.get("line");
+                    String message = (String) finding.get("message");
+
+                    report.append(String.format("  %s [%s] %s (line %d)\n", icon, severity, category, line));
+                    report.append(String.format("     └─ %s\n", message));
+                    report.append(String.format("        Code: %s\n\n", finding.get("code")));
+                }
+
+                report.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
+                report.append("  SUMMARY & RECOMMENDATIONS\n");
+                report.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n");
+
+                if (errorCount > 0) {
+                    report.append("  ⚠️  There are ").append(errorCount).append(" error(s) that should be fixed before merging.\n");
+                }
+                if (warnCount > 0) {
+                    report.append("  ⚡ Consider addressing the ").append(warnCount).append(" warning(s) to improve code quality.\n");
+                }
+                if (infoCount > 0) {
+                    report.append("  💡 ").append(infoCount).append(" suggestion(s) are informational — review and apply where appropriate.\n");
+                }
+                if (errorCount == 0 && warnCount == 0) {
+                    report.append("  🎉 Code quality looks solid! Minor suggestions above are optional improvements.\n");
+                }
+            }
+
+            report.append("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
+            report.append("  Reviewed by: java-spring-mcp code_review tool\n");
+            report.append("  Timestamp   : ").append(Instant.now()).append("\n");
+            report.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
+
+            return Map.of(
+                    "status", "reviewed",
+                    "totalLines", totalLines,
+                    "totalIssues", findings.size(),
+                    "errorCount", errorCount,
+                    "warnCount", warnCount,
+                    "infoCount", infoCount,
+                    "report", report.toString(),
+                    "findings", findings
+            );
         }
     }
 
